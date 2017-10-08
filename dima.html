@@ -1,0 +1,608 @@
+<canvas onmousemove="mouseMove(event)" onClick="clck(event)" onMouseDown="mouseDown(event)" onMouseUp="mouseUp()" width="1050" height="600" id="mag" style="border:solid;background:white;">Browser does not support HTML5</canvas>
+
+<script>
+
+var mouseX = 450, mouseY = 100;
+var electrons = [];
+var lasers = [];
+
+var s = 0;
+var brightness = 0;
+
+var microwave = 0;
+var microwaveX = 550;
+var microwaveS = 0;
+var playing = false;
+var speed = 2;
+
+function Laser(y){
+    this.y = y;
+	this.life = 8;
+	
+	this.update = function(){
+		this.life = this.life - 1;
+		return this.life <= 0;
+	}
+	
+	this.draw = function(ctx){
+		ctx.lineWidth = 4 - Math.abs(this.life - 4);
+ 
+		ctx.strokeStyle = '#ff0000';
+		
+		ctx.beginPath();
+		ctx.moveTo(900, this.y);
+		ctx.lineTo(1000, this.y);
+		ctx.stroke();
+		ctx.lineWidth = 2;
+	}
+}
+
+function Electron(energy){
+	this.state = 0;
+	this.statetime = 20;
+	this.energy = energy;
+	this.spin = 0;
+	this.oe = energy;
+	this.os = 0;
+	
+	this.update = function(){
+		if(this.statetime > 0){
+			this.statetime = this.statetime - 1;
+		}
+		
+		if(this.statetime == 0 && this.state == 1){
+			this.state = this.state - 1;
+			this.statetime = 1000000;
+			this.spin = 0;
+			this.energy = 0;
+		}
+		
+		if(this.statetime == 0 && this.state == 4){
+			this.state = this.state - 1;
+			this.statetime = 25;
+			this.spin = -2.87;
+			this.energy = 2.5;
+		}
+		if(this.statetime == 0 && this.state == 3){
+			this.state = 0;
+			this.statetime = 1000000;
+			this.spin = 0;
+			this.energy = 0;
+		}if(this.statetime == 0 && this.state == 2){
+			this.spin = 0;
+			this.energy = 0;
+			this.statetime = 50;
+			lasers.push(new Laser(195 + Math.random() * 20 - 10));
+		}if(this.oe < .1 && this.state == 2){
+			this.state = 0;
+			this.energy = 0;
+		}
+		
+		
+		if(this.state == 2 && this.energy > 3){
+			this.energy = this.energy - .015;
+		}
+		if(this.energy < 0.001 && Math.random() < 0.08 && this.state != 2){
+		
+			var right = 1+0.12*s;
+			var left = 1-0.12*s;
+			
+			this.energy = 1 + microwaveS * 0.12;
+			this.state = 1;
+			this.statetime = 12;
+			
+			var lb = false;
+			var rb = false;
+			if(this.energy > left - 0.03 && this.energy < left + 0.03){
+				lb = true;
+			}if(this.energy > right - 0.03 && this.energy < right + 0.03){
+				rb = true;
+			}
+			
+			if(rb && lb){
+				var a = Math.random();
+				if(a > .6){
+					this.spin = 1;
+					this.statetime = 70;
+				}else if(a > .2){
+					this.spin = -1;
+					this.statetime = 70;
+				}
+			}else if(rb){
+				var a = Math.random();
+				if(a > .3){
+					this.spin = 1;
+					this.statetime = 70;
+				}
+			}else if(lb){
+				
+				var a = Math.random();
+				if(a > .3){
+					this.spin = -1;
+					this.statetime = 70;
+				}
+			}
+			
+		}
+		
+		if(Math.random() > 0.992 && this.energy < 2 && this.state != 2){
+			if(this.energy < .1 || this.spin != 0){
+				this.state = 1;
+				this.statetime = 40;
+				if(this.spin != 0){
+					var a = Math.random();
+					if(a > .15){
+						this.spin = 0;
+						this.state = 4;
+						this.energy = this.energy + 4;
+					}else{
+						this.spin = 0;
+						this.state = 2;
+						this.energy = this.energy + 3;
+					}
+				}else{
+					var a = Math.random();
+					if(a > .15){
+						this.spin = 0;
+						this.state = 2;
+						this.energy = this.energy + 4;
+					}else{
+						this.spin = 0;
+						this.state = 4;
+						this.energy = this.energy + 5;
+					}
+				}
+				
+			}
+			
+			
+		}
+		
+		
+		this.oe = this.oe * 0.8 + this.energy * 0.2;
+		this.os = this.os * 0.8 + this.spin * 0.2;
+	}
+	
+	this.draw = function(ctx, i){
+		ctx.fillStyle = "#00aa00";
+		if(this.state == 2 && this.energy == 0){
+			brightness += 1;
+			ctx.shadowBlur = 32;
+			ctx.shadowColor = "red";
+			for(var a = 0;a < 15;a++){
+				ctx.fillRect(855 + i * 1 + this.os*50, 363-this.oe*50, 5, 5);
+			}
+		}
+		
+		ctx.beginPath();
+		ctx.arc(855 + i * 1 + this.os*50,366-this.oe*50,2.5,0,2*Math.PI);
+		ctx.fill();
+		
+		ctx.shadowBlur = 0;
+	}
+}
+
+function init(){
+	electrons = [];
+	for(var i = 0;i < 50;i++){
+		electrons.push(new Electron(0));
+	}
+}
+
+init();
+  
+  function drawBegin(){
+    var c = document.getElementById("mag");
+  var ctx = c.getContext("2d");
+  ctx.clearRect(0,0,1050,600);
+    
+    ctx.font = "20px serif";
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
+ 
+ ctx.fillText("Calibrate",100,120);
+    
+    
+    ctx.fillStyle = "#ff0000";
+	ctx.beginPath();
+    ctx.moveTo(90,100);
+	ctx.lineTo(110,100);
+	ctx.moveTo(100,90);
+	ctx.lineTo(100,110);
+	ctx.stroke();
+  }
+  
+function draw(){
+ var c = document.getElementById("mag");
+ var ctx = c.getContext("2d");
+ ctx.clearRect(0,0,1050,600);
+ 
+ ctx.fillStyle = "#000000";
+ ctx.font = "50px serif";
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
+ 
+ ctx.fillText("NV Center Magnetometry",500,40);
+ 
+ 
+ ctx.font = "16px serif";
+ 
+ ctx.fillStyle = "#0000ff";
+  ctx.fillText("- Click and Drag magnet to move it",200,80);
+   ctx.fillText("- Drag along bottom graph to change microwave frequency,",200,100);
+   ctx.fillText("or press play to animate frequency scan",200,115);
+   ctx.fillStyle = "#000000";
+   
+ 
+ 
+	ctx.shadowBlur = 32;
+	ctx.shadowColor = "red";
+	for(var a = 0;a < 15;a++){
+		ctx.fillRect(830, 40, 5, 5);
+	}
+	ctx.shadowBlur = 0;
+	ctx.fillText("=",855,40);
+	ctx.fillText("Fluorescing",900,32);
+	ctx.fillText("Electron",900,48);
+	
+ ctx.font = "20px serif";
+ ctx.beginPath();
+ ctx.strokeStyle = '#00ff00';
+ ctx.moveTo(0, 225);
+ ctx.lineTo(300,225);
+ ctx.stroke();
+ 
+ for(var a = -1;a <= 1; a++){
+  ctx.beginPath();
+  ctx.strokeStyle = '#000000';
+  ctx.moveTo(320, 225 + 8 * a);
+  var dis = fs * 100;
+  for(var i = 320;i <= 600;i+=5){
+   ctx.lineTo(i, 225 + 8 * a + 4 * Math.sin((i-320)/30*(2+microwaveS/8)));
+  }
+  ctx.lineWidth = 2;
+  ctx.stroke();
+ }
+ 
+ 
+ ctx.fillStyle = "#000000";
+ ctx.shadowBlur = 10;
+ ctx.shadowColor = "red";
+ ctx.fillRect(300-10,225-10,20,20);
+ ctx.shadowBlur = 0;
+ 
+ ctx.fillStyle = "#000000";
+ ctx.fillRect(300-7,241,14,4);
+ ctx.fillStyle = "#666666";
+ ctx.fillRect(300-25,245,50,85);
+ ctx.fillStyle = "#000000";
+ 
+ ctx.fillText("Red Light Sensor",300,340);
+ ctx.fillText("NV Center",300,180);
+ ctx.fillText("Diamond",300,200);
+ ctx.fillText("532nm Laser",150,236);
+ ctx.fillText("Variable Microwave",470,247);
+ ctx.fillText("Radiation",470,267);
+ 
+ var d = Math.sqrt((300-mouseX)*(300-mouseX)+(225-mouseY)*(225-mouseY));
+ var fs = (140/d)*(140/d);
+ s = fs;
+ 
+
+ 
+ ctx.beginPath();
+ ctx.moveTo(275,310);
+ ctx.lineTo(50,310);
+ ctx.lineTo(50,430);
+ ctx.stroke();
+
+ 
+
+ if(s > 4.4){
+  s = 4.4;
+ }if(s < -4.4){
+  s = -4.4;
+ } 
+ ctx.lineWidth = 1;
+ ctx.strokeStyle = '#0000ff';
+ ctx.beginPath();
+ ctx.moveTo(780,320-microwaveS*6);
+ ctx.lineTo(980,320-microwaveS*6);
+ ctx.stroke();
+ 
+ ctx.lineWidth = 3;
+ ctx.strokeStyle = '#000000';
+ ctx.beginPath();
+ ctx.moveTo(830,370);
+ ctx.lineTo(930,370);
+ ctx.stroke();
+
+ ctx.beginPath();
+ ctx.moveTo(795,320+s*6);
+ ctx.lineTo(865,320+s*6);
+ ctx.stroke();
+
+ ctx.beginPath();
+ ctx.moveTo(895,320-s*6);
+ ctx.lineTo(965,320-s*6);
+ ctx.stroke();
+ 
+ ctx.beginPath();
+ ctx.moveTo(700,245);
+ ctx.lineTo(770,245);
+ ctx.stroke();
+ 
+ ctx.fillStyle = "#bbbbbb";
+ ctx.fillRect(840,85,80,62);
+ ctx.fillStyle = "#dddddd";
+ ctx.fillRect(840,147,80,42);
+ ctx.fillStyle = "#000000";
+ ctx.fillText("Spin Triplet",880,400);
+ ctx.font = "14px serif";
+ ctx.fillText("0",880,379);
+ ctx.fillText("-1",830,329+s*6);
+ ctx.fillText("+1",930,329-s*6);
+
+ ctx.fillText("Metastable",735,255);
+ ctx.fillText("Singlet",735,270);
+ ctx.fillText("Metastable",880,108);
+ ctx.fillText("Decay",880,123);
+ ctx.fillText("Regular",880,160);
+ ctx.fillText("Decay",880,175);
+ 
+ 
+ ctx.fillText("Microwave",740,312-microwaveS*6);
+ ctx.fillText("Energy",740,328-microwaveS*6);
+ 
+ ctx.lineWidth = 1;
+ 
+ ctx.beginPath();
+ ctx.moveTo(685,105);
+ ctx.lineTo(685,395);
+ ctx.stroke();
+
+ 
+ ctx.fillText("Energy",660,250);
+ 
+ 
+ ctx.beginPath();
+ ctx.strokeStyle = '#000000';
+    ctx.moveTo(100, 460
+  + 50 * Math.pow(2.7, -1 * (100 - 550 + dis)*(100 - 550 + dis) / 1000)
+  + 50 * Math.pow(2.7, -1 * (100 - 550 - dis)*(100 - 550 - dis) / 1000)
+  );
+ var dis = fs * 100;
+ for(var i = 100;i <= 1000;i+=5){
+  ctx.lineTo(i, 460
+  + 50 * Math.pow(2.7, -1 * (i - 550 + dis)*(i - 550 + dis) / 1000)
+  + 50 * Math.pow(2.7, -1 * (i - 550 - dis)*(i - 550 - dis) / 1000)
+  );
+ }
+ ctx.lineWidth = 3;
+ ctx.stroke();
+ 
+ ctx.strokeStyle = '#0000ff';
+ ctx.beginPath();
+ ctx.moveTo(microwaveX, 450);
+ ctx.lineTo(microwaveX, 600);
+ ctx.stroke();
+ 
+ ctx.strokeStyle = '#000000';
+ ctx.fillText("Intensity",50,440);
+ ctx.fillText("Red",50,460);
+ ctx.fillText("Light",50,480);
+ 
+ ctx.fillText("Microwave",50,560);
+ ctx.fillText("Frequency",50,580);
+ 
+	
+ 
+ ctx.fillText("2.850 GHz",550,570);
+ ctx.fillText("2.845 GHz",250,570);
+ ctx.fillText("2.855 GHz",850,570);
+ 
+	ctx.lineWidth = 2;
+	
+	ctx.beginPath();
+	ctx.moveTo(110, 500);
+	ctx.lineTo(110, 530);
+	ctx.lineTo(140, 530);
+	ctx.lineTo(140, 500);
+	ctx.lineTo(110, 500);
+	ctx.lineTo(110, 530);
+	ctx.stroke(); 
+	 
+	ctx.beginPath();
+	ctx.moveTo(110, 540);
+	ctx.lineTo(110, 570);
+	ctx.lineTo(140, 570);
+	ctx.lineTo(140, 540);
+	ctx.lineTo(110, 540);
+	ctx.lineTo(110, 570);
+	ctx.stroke();
+ 
+	for(var i = 0;i < speed;i++){
+		ctx.beginPath();
+		ctx.moveTo(126 + i * 9 - 9 * speed / 2, 508);
+		ctx.lineTo(135 + i * 9 - 9 * speed / 2, 515);
+		ctx.lineTo(126 + i * 9 - 9 * speed / 2, 522);
+		ctx.lineTo(126 + i * 9 - 9 * speed / 2, 508);
+		ctx.fill();
+	}
+ 
+	if(playing){
+		ctx.lineWidth = 4;
+		ctx.beginPath();
+		ctx.moveTo(120, 545);
+		ctx.lineTo(120, 565);
+		ctx.moveTo(130, 545);
+		ctx.lineTo(130, 565);
+		ctx.stroke();
+	}else{
+		ctx.lineWidth = 4;
+		ctx.beginPath();
+		ctx.moveTo(117, 546);
+		ctx.lineTo(134, 555);
+		ctx.lineTo(117, 564);
+		ctx.lineTo(117, 546);
+		ctx.fill();
+	}
+ 
+ 
+  ctx.lineWidth = 3;
+ 
+ ctx.beginPath();
+ ctx.strokeStyle = '#000000';
+ for(var i = 100;i <= 1000;i += 5){
+  if((i-550) % 300 == 0){
+   ctx.moveTo(i, 583);
+  }else if((i-550) % 25 == 0){
+   ctx.moveTo(i, 590);
+  }else{
+   ctx.moveTo(i, 595);
+  }
+  ctx.lineTo(i, 600);
+  
+ }
+ ctx.lineWidth = 2;
+ ctx.stroke();
+
+	for(var i = 0;i < electrons.length;i++){
+		electrons[i].draw(ctx, i);
+	}
+	for(var i = 0;i < lasers.length;i++){
+		lasers[i].draw(ctx);
+	}
+	
+	
+	
+	var efbr = 	255 - 140 * Math.pow(2.7, -1 * (microwaveX - 550 + dis)*(microwaveX - 550 + dis) / 1000) - 140 * Math.pow(2.7, -1 * (microwaveX - 550 - dis)*(microwaveX - 550 - dis) / 1000); 
+
+	if(efbr > 255){
+		efbr = 255;
+	}if(efbr < 40){
+		efbr = 40;
+	}
+	
+	ctx.fillStyle = "rgb(" + Math.floor(efbr) + ", 0, 0)";
+	ctx.fillRect(1000,0,50,600);
+	
+	ctx.font = "24px serif";
+	ctx.fillStyle = "#000000"
+	ctx.rotate(1 * Math.PI/2);
+	ctx.fillText("Red Light Intensity",300,-1025);
+	ctx.rotate(-1 * Math.PI/2);
+	
+	ctx.font = "16px serif";
+	ctx.fillStyle = "#ff0000";
+	ctx.fillRect(mouseX-32,mouseY-16,32,32);
+	ctx.fillStyle = "#222222";
+	ctx.fillRect(mouseX,mouseY-16,32,32);
+	ctx.fillStyle = "#cccccc";
+	ctx.fillText("magnet",mouseX,mouseY);
+	ctx.fillStyle = "#000000";
+	
+}
+
+draw();
+
+var c = document.getElementById("mag");
+var ctx = c.getContext("2d");
+ctx.fillStyle = "#FF0000";
+  
+  var ox = 12;
+  var oy = 12;
+
+var placed = true;
+var mouseIsDown = false;
+
+function clck(e)
+{
+	if(!placed){
+		placed = true;
+	}else{
+		if(Math.abs((e.pageX-ox)-mouseX) < 75 && Math.abs((e.pageY-ox)-mouseY) < 75){
+			placed = false;
+		}
+	}
+}
+
+function mouseDown(e){
+	mouseIsDown = true;
+	
+	var mx = e.pageX-ox;
+	var my = e.pageY-oy;
+
+	console.log(mx, my);
+	
+	if(placed){
+		if(Math.abs((e.pageX-ox)-mouseX) < 75 && Math.abs((e.pageY-ox)-mouseY) < 75){
+			placed = false;
+		}else if(mx > 110 && mx < 140 && my > 540 && my < 570){
+			playing = !playing;
+		}else if(mx > 110 && mx < 140 && my > 500 && my < 530){
+			speed = speed + 1;
+			if(speed == 4){
+				speed = 1;
+			}
+		}else{
+			microwaveX = e.pageX-ox;
+			if(microwaveX > 1000){
+				microwaveX = 1000;
+			}else if(microwaveX < 100){
+				microwaveX = 100;
+			}
+			microwaveS =(microwaveX - 550)/100;
+		}
+	}
+}
+
+function mouseUp(){
+	mouseIsDown = false;
+}
+
+function mouseMove(e)
+{
+	var mx = e.pageX-ox;
+	var my = e.pageY-oy;
+	
+	if(!placed){
+		mouseX = e.pageX-ox;
+		mouseY = e.pageY-oy;
+	}else if(mx > 110 && mx < 140 && my > 540 && my < 570){
+	}else if(mx > 110 && mx < 140 && my > 500 && my < 530){
+	}else if(mouseIsDown){
+		microwaveX = e.pageX-ox;
+		if(microwaveX >= 1000){
+			microwaveX = 1000;
+		}else if(microwaveX < 100){
+			microwaveX = 100;
+		}
+		microwaveS =(microwaveX - 550)/100;
+	}
+}
+
+function update(){
+	if(playing){
+		microwaveX = microwaveX + .05 * (2+speed) * Math.pow(2,speed);
+		if(microwaveX >= 1000){
+			microwaveX = 100;
+		}
+		microwaveS =(microwaveX - 550)/100;
+	}
+	for(var i = 0;i < electrons.length;i++){
+		electrons[i].update();
+	}for(var i = 0;i < lasers.length;i++){
+		if(lasers[i].update()){
+			lasers.splice(i, 1);
+		}
+	}
+	draw();
+	setTimeout(update, 25);
+}
+
+update();
+
+
+
+</script>
